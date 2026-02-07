@@ -410,7 +410,7 @@ declare(strict_types=1);
 </div>
 
 <!-- Three.js (local vendor). Falls back to CDN if needed. -->
-<script src="./assets/vendor/three.min.js"></script>
+<script src="./three.min.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
