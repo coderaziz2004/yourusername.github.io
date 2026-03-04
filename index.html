@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <title>Degla — 3D Drone Simulation</title>
   <style>
@@ -15,9 +15,18 @@
       --shadow: 0 18px 60px rgba(0,0,0,.45);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      /* Safe area (notches) */
+      --sat: env(safe-area-inset-top, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
     }
+
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
+
+    /* iOS safari full-height fix */
     body{
       margin:0;
       font-family: var(--sans);
@@ -27,30 +36,57 @@
         radial-gradient(900px 640px at 82% 70%, rgba(34,197,94,.12), transparent 60%),
         linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg0));
       overflow:hidden;
+      min-height: 100vh;
+      min-height: 100svh; /* modern mobile */
     }
-    #app{ height:100%; display:grid; grid-template-columns: 1fr; padding:0; }
-    .viewport{ position:relative; height:100%; background: rgba(0,0,0,.22); overflow:hidden; }
-    #gl{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+    #app{
+      height: 100vh;
+      height: 100svh;
+      display:grid;
+      grid-template-columns: 1fr;
+      padding:0;
+    }
+
+    .viewport{
+      position:relative;
+      height:100%;
+      background: rgba(0,0,0,.22);
+      overflow:hidden;
+    }
+
+    #gl{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      touch-action: none;
+    }
 
     /* Top-left image */
     .cornerBadge{
       position:absolute;
-      top: 14px;
-      left: 14px;
+      top: calc(14px + var(--sat));
+      left: calc(14px + var(--sal));
       z-index: 9;
       width: 190px;
       height: auto;
       border-radius: 14px;
-      background: rgba(0,0,0,.22);
+      border: none;              /* remove weird border line */
+      outline: none;
       box-shadow: 0 16px 45px rgba(0,0,0,.45);
       backdrop-filter: blur(10px);
       pointer-events: none;
       opacity: .95;
+      -webkit-user-drag: none;
+      user-select:none;
+      display:block;
     }
 
     .topPill{
       position:absolute;
-      top: 18px;
+      top: calc(18px + var(--sat));
       left: 50%;
       transform: translateX(-50%);
       z-index: 6;
@@ -67,6 +103,7 @@
       letter-spacing: .2px;
       color: rgba(226,232,240,.90);
       pointer-events:none;
+      white-space:nowrap;
     }
     .topPill .mark{
       width: 18px; height: 18px;
@@ -80,11 +117,11 @@
       color:#cbd5e1;
     }
 
-    /* Small menu */
+    /* Menu */
     .menu{
       position:absolute;
-      top: 18px;
-      right: 16px;
+      top: calc(18px + var(--sat));
+      right: calc(16px + var(--sar));
       z-index: 8;
       display:flex;
       gap: 8px;
@@ -103,6 +140,8 @@
       cursor: pointer;
       transition: transform .12s ease, border-color .12s ease, background .12s ease;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 40px; /* touch target */
     }
     .menuBtn:hover{
       transform: translateY(-1px);
@@ -124,7 +163,7 @@
       max-width: 980px;
       width: min(980px, calc(100vw - 44px));
       text-align: center;
-      font-size: clamp(26px, 3.1vw, 44px);
+      font-size: clamp(22px, 3.4vw, 44px);
       line-height: 1.22;
       letter-spacing: -.01em;
       font-weight: 520;
@@ -133,6 +172,7 @@
       white-space: pre-wrap;
       will-change: transform, top, opacity;
       font-family: var(--sans);
+      padding: 0 6px;
     }
     .line1{
       top: 44%;
@@ -140,7 +180,7 @@
       transition: top .75s ease, transform .75s ease, opacity .25s ease;
     }
     .stage.stage2 .line1{
-      top: 76px;
+      top: calc(76px + var(--sat));
       transform: translate(-50%, 0) scale(0.78);
     }
     .line2{
@@ -166,10 +206,10 @@
 
     .warnOverlay{
       position:absolute;
-      left: 14px;
-      bottom: 14px;
+      left: calc(14px + var(--sal));
+      bottom: calc(14px + var(--sab));
       z-index: 7;
-      max-width: 520px;
+      max-width: min(520px, calc(100vw - 28px));
       border:1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.40);
       border-radius: 14px;
@@ -186,7 +226,7 @@
     .labels{ position:absolute; inset:0; z-index:4; pointer-events:none; }
     .label{
       position:absolute;
-      transform: translate(-50%, calc(-100% - 16px));
+      transform: translate(-50%, calc(-100% - 14px));
       max-width: 170px;
       border:1px solid rgba(255,255,255,.12);
       background: rgba(0,0,0,.45);
@@ -195,6 +235,7 @@
       font-family: var(--mono);
       color:#e2e8f0;
       backdrop-filter: blur(10px);
+      overflow:hidden;
     }
     .label .t{ font-size:9px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .label .s{ margin-top:1px; font-size:8px; line-height:1.1; color: var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -211,6 +252,7 @@
       transform: translate(-50%, -50%);
       width: min(860px, calc(100vw - 36px));
       max-height: min(78vh, 720px);
+      max-height: min(78svh, 720px);
       overflow:auto;
       border-radius: 18px;
       border:1px solid rgba(255,255,255,.12);
@@ -262,6 +304,8 @@
       cursor: pointer;
       transition: transform .12s ease, border-color .12s ease, background .12s ease;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 40px;
     }
     .closeBtn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.08); }
     .closeBtn:active{ transform: translateY(0px); }
@@ -287,6 +331,7 @@
       font-size: 12px;
       outline: none;
       transition: border-color .12s ease, box-shadow .12s ease, background .12s ease;
+      min-height: 40px;
     }
     .textarea{ min-height: 132px; resize: vertical; font-family: var(--sans); font-size: 13px; line-height: 1.45; }
     .input:focus, .textarea:focus{
@@ -294,7 +339,7 @@
       border-color: rgba(59,130,246,.35);
       background: rgba(0,0,0,.42);
     }
-    .formActions{ display:flex; align-items:center; justify-content:space-between; gap: 10px; margin-top: 8px; }
+    .formActions{ display:flex; align-items:center; justify-content:space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
     .hint{ font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.35; }
     .primaryBtn{
       border: 1px solid rgba(255,255,255,.14);
@@ -307,6 +352,8 @@
       cursor: pointer;
       transition: transform .12s ease, border-color .12s ease, background .12s ease;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 40px;
     }
     .primaryBtn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.18); background: rgba(59,130,246,.22); }
     .primaryBtn:active{ transform: translateY(0px); }
@@ -322,16 +369,79 @@
       font-family: var(--mono);
       font-size: 11px;
       color: rgba(226,232,240,.90);
+      white-space: nowrap;
     }
     .statusPill.ok{ color: rgba(187,247,208,.92); border-color: rgba(34,197,94,.22); background: rgba(34,197,94,.10); }
     .statusPill.err{ color: rgba(254,202,202,.92); border-color: rgba(239,68,68,.22); background: rgba(239,68,68,.10); }
 
+    /* ===== Mobile layout fixes ===== */
     @media (max-width: 720px){
+      .cornerBadge{
+        width: 128px;
+        top: calc(10px + var(--sat));
+        left: calc(10px + var(--sal));
+        border-radius: 12px;
+      }
+
+      /* put pill below top controls to avoid collisions */
+      .topPill{
+        top: calc(62px + var(--sat));
+        padding: 9px 12px;
+        font-size: 11px;
+      }
+
+      /* stack menu buttons vertically (fat-finger friendly) */
+      .menu{
+        top: calc(10px + var(--sat));
+        right: calc(10px + var(--sar));
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+      }
+      .menuBtn{
+        padding: 10px 12px;
+        font-size: 12px;
+        min-width: 92px;
+      }
+
+      .line{
+        width: min(980px, calc(100vw - 26px));
+        font-size: clamp(20px, 5.3vw, 34px);
+      }
+      .stage.stage2 .line1{
+        top: calc(112px + var(--sat)); /* keep below stacked menu */
+        transform: translate(-50%, 0) scale(0.82);
+      }
+
+      /* labels smaller on mobile */
+      .label{
+        max-width: 150px;
+        padding: 4px 6px;
+        border-radius: 10px;
+      }
+      .label .t{ font-size: 9px; }
+      .label .s{ font-size: 8px; }
+
+      .modal{
+        width: calc(100vw - 20px);
+        max-height: calc(100svh - 28px);
+        top: 50%;
+      }
       .formGrid{ grid-template-columns: 1fr; }
-      .cornerBadge{ width: 150px; }
+      .aboutText{ font-size: 13.5px; }
+      .aboutFooter{ flex-wrap: wrap; row-gap: 6px; }
+    }
+
+    /* ultra small */
+    @media (max-width: 380px){
+      .cornerBadge{ width: 112px; }
+      .menuBtn{ min-width: 86px; }
+      .topPill{ top: calc(58px + var(--sat)); }
+      .label{ max-width: 140px; }
     }
   </style>
 </head>
+
 <body>
 <div id="app">
   <main class="viewport" aria-label="3D mission viewport">
@@ -436,7 +546,7 @@ Join the shift from human-controlled drones to software-controlled fleets.
                 <div class="hint" id="contactHint">
                   No backend configured → we’ll open your email client on send.
                 </div>
-                <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                   <span class="statusPill" id="contactStatus" style="display:none;"></span>
                   <button class="primaryBtn" id="sendBtn" type="submit">Send message</button>
                 </div>
@@ -561,7 +671,8 @@ Join the shift from human-controlled drones to software-controlled fleets.
   const typed1 = $("typed1");
   const typed2 = $("typed2");
   const line1 = "Degla turns natural language into multi-drone mission execution for Search & Rescue.";
-//  const line2 = "Multi-drone coverage, survivor detection, resilient execution.";
+  const line2 = ""; // optional second line
+
   function setText(el, text) { if (el) el.textContent = text; }
   function typeLine(el, line, speedBase, speedJitter, punctPause, done) {
     let i = 0;
@@ -710,7 +821,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
       g.fillStyle = "#0e1218";
       g.fillRect(0,0,c.width,c.height);
 
-      // grit
       for (let i = 0; i < 17000; i++) {
         const x = Math.random() * c.width;
         const y = Math.random() * c.height;
@@ -719,7 +829,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
         g.fillRect(x,y,1,1);
       }
 
-      // cracks
       g.globalAlpha = 0.22;
       g.strokeStyle = "rgba(0,0,0,0.55)";
       for (let i=0;i<90;i++){
@@ -831,7 +940,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
           const x = band.x0 + Math.random()*(band.x1-band.x0);
           const z = band.z0 + Math.random()*(band.z1-band.z0);
 
-          // keep main cross roads near center clearer
           if (Math.abs(x) < 22 || Math.abs(z) < 22) { continue; }
 
           const w = 10 + Math.random()*18;
@@ -896,7 +1004,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
           const rad = Math.random()*p.r;
           m.position.set(p.x + Math.cos(a)*rad, sy*0.5, p.z + Math.sin(a)*rad);
 
-          // keep center cross roads clearer
           if (Math.abs(m.position.x) < 18 || Math.abs(m.position.z) < 18) { i--; continue; }
 
           m.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
@@ -997,7 +1104,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
       return { group: g };
     }
 
-    // SAR visuals
     function makeScanCone() {
       const geo = new THREE.ConeGeometry(6.8, 13.5, 20, 1, true);
       const mat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent:true, opacity: 0.10, side: THREE.DoubleSide, depthWrite:false });
@@ -1018,9 +1124,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
     function v(x, y, z) { return new THREE.Vector3(x, y, z); }
     const ALT = 14;
 
-    // =========================
-    // SAR PATHS (safe in-bounds)
-    // =========================
     function genGridSweep(bounds, rows=10, inset=26) {
       const pts = [];
       const x0 = bounds.x0 + inset, x1 = bounds.x1 - inset;
@@ -1045,7 +1148,7 @@ Join the shift from human-controlled drones to software-controlled fleets.
       for (let i=0;i<=samples;i++){
         const t = i / samples;
         const a = t * Math.PI * 2 * turns;
-        const k = 1 - t; // inward
+        const k = 1 - t;
         pts.push(v(
           cx + Math.cos(a) * rx * k,
           ALT,
@@ -1082,10 +1185,10 @@ Join the shift from human-controlled drones to software-controlled fleets.
       v(-30, ALT,  55),
     ];
 
-    const core1 = genGridSweep(ZONE, 11, 26);                 // grid search
-    const core2 = genHotspotLoops(HOTSPOTS, 12, 38);          // thermal loops
-    const core3 = genSpiral(ZONE, 3.2, 240, 28);              // mapping spiral
-    const core4 = genHotspotLoops([HOTSPOTS[1]], 8, 36);      // confirm hotspot
+    const core1 = genGridSweep(ZONE, 11, 26);
+    const core2 = genHotspotLoops(HOTSPOTS, 12, 38);
+    const core3 = genSpiral(ZONE, 3.2, 240, 28);
+    const core4 = genHotspotLoops([HOTSPOTS[1]], 8, 36);
 
     const entry1 = core1[0], entry2 = core2[0], entry3 = core3[0], entry4 = core4[0];
     const t1 = genTransit(BASE, entry1, 85);
@@ -1093,7 +1196,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
     const t3 = genTransit(BASE, entry3, 55);
     const t4 = genTransit(BASE, entry4, 40);
 
-    // IMPORTANT: centripetal prevents overshoot
     const curves = {
       d1: { transit: new THREE.CatmullRomCurve3(t1, false, "centripetal", 0.0), core: new THREE.CatmullRomCurve3(core1, true, "centripetal", 0.0) },
       d2: { transit: new THREE.CatmullRomCurve3(t2, false, "centripetal", 0.0), core: new THREE.CatmullRomCurve3(core2, true, "centripetal", 0.0) },
@@ -1142,15 +1244,25 @@ Join the shift from human-controlled drones to software-controlled fleets.
       { el: $("l4"), s: $("s4"), obj: drone4.group },
     ];
     const tmpV = new THREE.Vector3();
+
+    /* Mobile-friendly label clamping so they don't go off-screen */
     function updateLabel(label) {
       const rect = canvas.getBoundingClientRect();
       label.obj.getWorldPosition(tmpV);
       tmpV.project(camera);
-      const x = (tmpV.x * 0.5 + 0.5) * rect.width;
-      const y = (-tmpV.y * 0.5 + 0.5) * rect.height;
+
+      let x = (tmpV.x * 0.5 + 0.5) * rect.width;
+      let y = (-tmpV.y * 0.5 + 0.5) * rect.height;
+
+      const visible = tmpV.z > -1 && tmpV.z < 1;
+
+      // Clamp labels into viewport with padding
+      const pad = 10;
+      x = Math.max(pad, Math.min(rect.width - pad, x));
+      y = Math.max(pad, Math.min(rect.height - pad, y));
+
       label.el.style.left = `${x}px`;
       label.el.style.top = `${y}px`;
-      const visible = tmpV.z > -1 && tmpV.z < 1;
       label.el.classList.toggle("hide", !visible);
     }
 
@@ -1173,7 +1285,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
       ring.material.opacity = base + k * amp;
     }
 
-    // Hard clamp so drones never go outside map edges
     function clampToZone(p, pad=7){
       p.x = THREE.MathUtils.clamp(p.x, ZONE.x0 + pad, ZONE.x1 - pad);
       p.z = THREE.MathUtils.clamp(p.z, ZONE.z0 + pad, ZONE.z1 - pad);
@@ -1197,7 +1308,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
       clock.getDelta();
       const t = clock.elapsedTime;
 
-      // smoke drift
       if (smoke) {
         smoke.children.forEach((s, i) => {
           s.position.y += 0.004 + (i%3)*0.001;
@@ -1210,7 +1320,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
       const takeoff = Math.min(1, t / state.takeoffSec);
       const lift = 1.0 + (ALT - 1.0) * (1 - Math.pow(1 - takeoff, 3));
 
-      // Drone 1: continuous grid search
       {
         const transitDur = 2.2;
         if (t < transitDur) {
@@ -1224,7 +1333,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
         }
       }
 
-      // Drone 2: thermal spotter (pulses on detection windows)
       {
         const transitDur = 2.4;
         if (t < transitDur) {
@@ -1246,7 +1354,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
         }
       }
 
-      // Drone 3: mapping spiral (ends at "Map complete")
       {
         const transitDur = 2.1;
         if (t < transitDur) {
@@ -1261,7 +1368,6 @@ Join the shift from human-controlled drones to software-controlled fleets.
         }
       }
 
-      // Drone 4: confirm / approach
       {
         const transitDur = 2.0;
         if (t < transitDur) {
